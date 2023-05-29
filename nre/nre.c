@@ -19,8 +19,23 @@
 int verificaNegativo(uint8_t num){
   return num >> 7;
 }
- 
+
+int verificaExtensao(char *nomeArquivo){
+  char *ext = strrchr(nomeArquivo, '.');
+  
+  if (strcmp(ext,".nar") != 0){
+    printf("\nO arquivo deve ser do formato .nar!\n");
+    return 1;
+  }
+
+  return 0;
+}
+
 void lerBinario(char *nomeArquivo){
+  if(verificaExtensao(nomeArquivo)){
+    exit(0);
+  }
+
   static uint8_t c[MAX_TAMANHO];
   FILE *f;
   f = fopen(nomeArquivo, "r");
