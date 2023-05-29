@@ -1,10 +1,14 @@
 all: delete main clean
 
+binario:
+	gcc -W -Wall gerarBinario.c -o gerarBinario
+	clear
+
 clean:
 	clear
 
 delete: 
 	@rm -rf src/*.o
 
-main: main.c
-	gcc -W -Wall main.c -o main
+main: nre.c
+	gcc -W -Wall nre.c -o nre
