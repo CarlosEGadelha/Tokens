@@ -2,101 +2,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+
 #define MAX_TAMANHO 512
 #define MAX_MEMORIA 30000
+#define HEADER 42   
+#define STA 16
+#define LDA 32
+#define ADD 48
+#define OR 64
+#define AND 80
+#define NOT 96
+#define JMP 128
+#define JN 144
+#define JZ 160
+#define HLT 240
 
-/*int P = 0;
-int memoria[MAX_MEMORIA];
-char mem_repeticao[MAX_MEMORIA];
-int repeticao =0;
-
-void verificaCaracter(char letra){
-
-	if(repeticao == 0)
-	{
-		if(letra == '>')
-			P++;
-		if(letra == '<')
-			P--;
-		if(letra == '+')
-			memoria[P] += 1;
-		if(letra == '-')
-			memoria[P] -= 1;
-		if(letra == '.')
-			putchar(memoria[P]);	
-		if(letra == ',')
-			memoria[P] = getchar();
-		if(letra == '[')
-			repeticao ++;
-		if(letra == ']'){
-			printf("\nRejeitado! Loop finalizado antes de ser inicializado!");
-		 	exit(0);
-		}
-	}
-
-	else 
-	{
-		if(letra == ']'){
-		
-			repeticao = 0;
-			
-			while(memoria[P] != 0){
-				for(int i =0; i < MAX_MEMORIA ; i++)
-					verificaCaracter(mem_repeticao[i]);
-			}	
-		}
-			
-		else{
-			mem_repeticao[repeticao] = letra;
-			repeticao ++;
-		}
-	}
+int verificaNegativo(uint8_t num){
+  return num >> 7;
 }
-
-int verificaSintaxe(char *palavra){
-	char letra;
-  unsigned i = 0;
-	char alfabeto[] = {'>', '<', '+', '-', '.', ',', '[', ']', '\n','\t'}; 
-	unsigned aceita = 0;
-
-	while (i < strlen(palavra)) {
-		letra = palavra[i];
-
-		for(int j = 0; alfabeto[j]!=NULL; j++){
-			if(letra == alfabeto[j]){
-				aceita++;
-				verificaCaracter(letra);
-			}
-		}
-
-		if(aceita == 0)
-			return 1;
-
-		aceita =0;
-		i++;
-	}
-	
-	return 0; 
-}
-
-void lerArquivo(char *nomeArquivo) {
-  FILE *f;
-  f = fopen(nomeArquivo, "r");
-  fseek(f, 0, SEEK_SET);
-  fread(c,512,1, f);
-
-  // #LENDO POR LINHA#
-  for(int i = 0; c[i] != NULL; i++){
-    //if(verificaSintaxe(c[i]) != 0){
-      //printf("\nRejeitado! Caracter %s não pertence aos comandos da linguagem\n", palavra);
-			//exit(0);
-    //}
-    printf(" %x ", c[i]);
-  }
-	
-	printf("\nAceito\n");	
-  fclose(f);
-}*/
 
 void lerBinario(char *nomeArquivo){
   static uint8_t c[MAX_TAMANHO];
@@ -105,23 +28,118 @@ void lerBinario(char *nomeArquivo){
   fseek(f, 0, SEEK_SET);
   fread(c, 512, 1, f);
   
-  for(int i = 0; c[i] != 0b11110000; i++){
+  for(int i = 0; c[i] != HLT; i++){
     printf(" %u ", c[i]);
   }
+
+  printf("\n");
 }
 
 void gerarBinario(char *buffer, int tamanhoBuffer){
   FILE *f = fopen("binario.bin", "wb");
-  fwrite(buffer, 1, 10, f);
+  fwrite(buffer, 1, tamanhoBuffer, f);
   fclose(f);
 }
 
+void verificaBytes(char *nomeArquivo){
+  uint8_t c[MAX_TAMANHO], Ac, PC;
+  int i = 3;
+  FILE *f;
+  f = fopen(nomeArquivo, "rb");
+  fseek(f, 0, SEEK_SET);
+  fread(c, 512, 1, f);
+  
+  if(c[0] != HEADER){
+    printf("\nRejeitado! O primeiro byte deve ser 42.");
+    exit(0);
+  }
+  
+  Ac = c[1];
+  PC = c[2];
+ 
+  while(c[i] != HLT){
+    switch(c[i]){
+      case STA:
+        //printf(" STA ");
+        i++;
+        c[c[i]] = Ac;
+        //printf(" END: %u ", c[i]);
+        //printf(" %u ", c[c[i]]);
+        break;
+      
+      case LDA:
+        //printf(" LDA ");
+        i++;
+        Ac = c[c[i]];
+        //printf(" END: %u ", c[i]);
+        //printf(" AC: %u ", Ac);
+        break;
+    
+      case ADD:
+        //printf(" ADD ");
+        i++;
+        Ac += c[c[i]];
+        //printf(" END: %u ", c[i]);
+        //printf(" AC: %u ", Ac);
+        break;
+
+      case OR:
+        //printf(" OR ");
+        i++;
+        Ac |= c[c[i]];
+        break;
+
+      case AND:
+        //printf(" AND ");
+        i++;
+        Ac &= c[c[i]];
+        break;
+
+      case NOT:
+        Ac = ~Ac;
+        //printf(" NOT ");
+        break;
+
+      case JMP:
+        i++;
+        i = c[i];
+        i--;
+        //printf(" JMP ");
+        break;
+
+      case JN:
+        //printf(" JN ");
+        i++;
+        if(verificaNegativo(c[c[i]]))
+          i = c[i];
+          i--;
+        break;
+      
+      case JZ:
+        //printf(" JN ");
+        if(Ac == 0){
+          i++;
+          i = c[i];
+          i--;
+        }
+        break;
+    }
+    i++;
+  }
+
+  printf("\nACUMULADOR: %u\n", Ac);
+  printf("\nProgram counter: %u\n", PC);
+
+}
+
 int main() {
-	char buffer[10] = {42,0,0,32,10,48,11,16,12,240};
-	
-  gerarBinario(buffer, 10);
+	char buffer[13] = {42,2,1,32,10,48,11,16,12,240,1,2,0};
+	//char buffer[26] = {42, 1, 0, 16, 0, 32, 0, 48, 0, 64, 0, 80, 0, 96, 128, 14, 3, 144, 17, 0, 32, 1, 160, 22, 0, 240};
+  gerarBinario(buffer, 13);
 
   lerBinario("binario.bin");
+
+  verificaBytes("binario.bin");
 
 	return 0;
 }
